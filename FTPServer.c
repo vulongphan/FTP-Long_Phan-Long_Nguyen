@@ -26,7 +26,7 @@ int main()
 	// array of passwords corresponding to users
 	char* pass_list[] = {"1234", "abcd"};
  
-	//1. Create a socket and server address structure (address family, port number as 9000 and address are set)
+	//1. Create a socket and server address structure (address family, port number as 8888 and address are set)
 	int server_fd = socket(AF_INET,SOCK_STREAM,0);
 	if(server_fd<0)
 	{
@@ -38,7 +38,7 @@ int main()
 	memset(&server_address,0,sizeof(server_address));
 
 	server_address.sin_family = AF_INET;
-	server_address.sin_port = htons(9000);
+	server_address.sin_port = htons(8889);
 	server_address.sin_addr.s_addr = htonl(INADDR_ANY);
 	
 	//2. Bind the socket with the server address
@@ -79,38 +79,57 @@ int main()
 		{
 			char command[100];
 			char user_name[100];
+			char response[100];
+			
 			int set_user = 0; // 0 means user is not set and 1 means otherwise
 			
 			while(1)
 			{
 				memset(message,0,sizeof(message));
+				
+				
 				if(recv(client_fd,message,sizeof(message)-1,0)>0)
 				{
 					if(strcmp(message,"bye")==0)
 					{
 						break;
 					}
-					printf("%s: %s \n",client_name, message);
+					// printf("%s: %s \n",client_name, message);
 
 					strncpy(command, &message[0], 5); 
 					command[5] = 0;	
 					printf("Command: %s\n", command);
 					if (strncmp(command, "USER ", 5) == 0) { // if command is USER user_name
 						strncpy(user_name, &message[5], sizeof(message)-5);
-						printf("Username: %s\n", user_name);
 						if (userExist(user_name, users_list, 2) >= 0) { // if user exists
-							printf("User exists\n");
 							set_user = 1;
-							char* response = "Username OK, password required";
+							strcpy(response, "Username OK, password required");
 							send(client_fd,response,strlen(response),0);
 
 						}
-						// else {}	
+						else {
+							strcpy(response,"Username not recognized");
+							send(client_fd,response,strlen(response),0);
+						}	
 					}
 					
-					else if (strncmp(command, "PASS", 4) == 0 /*&& set_user == 1*/) {
-						// printf("User is set");
-						printf("PASS command from client");
+					else if (strncmp(command, "PASS ", 5) == 0) { 
+						if (set_user == 1){
+							char input[100] = "User authorized";
+							strcpy(response,input);
+							printf("response for correct pass: %s\n", response);
+							send(client_fd,response,sizeof(response),0);
+						}
+						else {
+							char input[100] = "User not recognize, please use USER to pass your user name first";
+							strcpy(response,input);
+							send(client_fd,response,sizeof(response),0);
+						}
+						
+					}
+					else {
+						strcpy(response, "Command not recognized");
+						send(client_fd,response,sizeof(response),0);
 					}
 					
 				}
