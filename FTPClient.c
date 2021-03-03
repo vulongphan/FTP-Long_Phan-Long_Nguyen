@@ -29,7 +29,7 @@ int main()
 	memset(&server_address,0,sizeof(server_address));
 
 	server_address.sin_family = AF_INET;
-	server_address.sin_port = htons(8889);
+	server_address.sin_port = htons(9000);
 	server_address.sin_addr.s_addr = htonl(INADDR_ANY);
 	
 	//2. The client makes connection the server which is listening on port 8888
@@ -40,7 +40,6 @@ int main()
 	}
 
 	char message[100];
-	char response[100];
 
 	while(1)
 	{
@@ -50,8 +49,9 @@ int main()
 		message[strcspn(message,"\n")]=0; //lets add it
 	//3. send/rec
 		send(server_fd,message,strlen(message),0);
-		recv(server_fd,response,sizeof(response)-1,0);
-		printf("%s\n", response);
+		memset(message, 0, sizeof(message));
+		recv(server_fd,message,sizeof(message)-1,0);
+		printf("%s\n", message);
 		if(strcmp(message,"bye")==0)  break;
 	}
 
