@@ -28,7 +28,7 @@ int main()
 	// array of passwords corresponding to users
 	char *pass_list[] = {"1234", "abcd"};
 
-	//1. Create a socket and server address structure (address family, port number as 8888 and address are set)
+	//1. Create a socket and server address structure 
 	int server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_fd < 0)
 	{
@@ -40,8 +40,8 @@ int main()
 	memset(&server_address, 0, sizeof(server_address));
 
 	server_address.sin_family = AF_INET;
-	server_address.sin_port = htons(9000);
-	server_address.sin_addr.s_addr = htonl(INADDR_ANY);
+	server_address.sin_port = htons(9000); 
+	server_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK); 
 
 	//2. Bind the socket with the server address
 	if (bind(server_fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)

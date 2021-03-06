@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -6,7 +7,7 @@
 #include <unistd.h>
 #include <netinet/in.h>
 
-int main()
+int main(int argc, char *argv[])
 {
 	/**
 	 * How a FTP client application works
@@ -16,6 +17,16 @@ int main()
 	 * In this case, in the control connection, the client needs to authenticate itself with the server for the control connection to be established
 	 * 
 	*/
+
+	u_int32_t ip;
+	if (strcmp(argv[1], "127.0.0.1") == 0)
+		ip = INADDR_LOOPBACK;
+	else
+	{
+		printf("Error: Only support localhost connection at 127.0.0.1\n");
+		return -1;
+	}
+	int port = atoi(argv[2]);
 
 	//1. Create a socket and set address family, port number and address
 	int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -29,8 +40,8 @@ int main()
 	memset(&server_address, 0, sizeof(server_address));
 
 	server_address.sin_family = AF_INET;
-	server_address.sin_port = htons(9000);
-	server_address.sin_addr.s_addr = htonl(INADDR_ANY);
+	server_address.sin_port = htons(port);
+	server_address.sin_addr.s_addr = htonl(ip);
 
 	//2. The client makes connection the server which is listening on port 8888
 	if (connect(server_fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
