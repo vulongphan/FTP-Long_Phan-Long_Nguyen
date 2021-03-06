@@ -57,59 +57,33 @@ int main()
 		return -1;
 	}
 
-	// select() preparation
-	fd_set full_fdset, ready_fdset;
-	FD_ZERO(&full_fdset);
-	FD_SET(server_fd, &full_fdset);
-
-	int max_fd = server_fd;
-
 	//4. accept
 	struct sockaddr_in client_address;				 //we to pass this to accept method to get client info
 	int client_address_len = sizeof(client_address); // accept also needs client_address length
-
-	// char client_name[50];
+	char client_name[50];
 
 	while (1)
 	{
-		ready_fdset = full_fdset;
-		if (select(max_fd + 1, &ready_fdset, NULL, NULL, NULL) < 0)
+		int client_fd = accept(server_fd, (struct sockaddr *)&client_address, (socklen_t *)&client_address_len); // waiting for connections from a client
+
+		inet_ntop(AF_INET, &client_address.sin_addr, client_name, sizeof(client_name));
+
+		if (client_fd < 0)
 		{
-			perror("Select");
+			perror("Accept: ");
 			return -1;
 		}
 
-		for (int i = 0; i <= max_fd; i++)
+		int pid = fork();
+		if (pid == 0)
 		{
-			if (FD_ISSET(i, &ready_fdset)) // check if the bit at i is set
-			{
-				if (i == server_fd) // if the bit is used by server socket
-				{
-					// int client_fd = accept(server_fd, (struct sockaddr *)&client_address, (socklen_t *)&client_address_len); // waiting for connections from a client
-					// inet_ntop(AF_INET, &client_address.sin_addr, client_name, sizeof(client_name));
-
-					int client_fd = accept(server_fd, NULL, NULL);
-					if (client_fd < 0)
-					{
-						perror("Accept: ");
-						return -1;
-					}
-					FD_SET(client_fd, &full_fdset);
-
-					if (client_fd > max_fd)
-						max_fd = client_fd;
-				}
-				else
-				{
-					serve_client(i, users_list, pass_list);
-					FD_CLR(i, &full_fdset);
-				}
-			}
+			serve_client(client_fd, users_list, pass_list);
 		}
 	}
+
+	//5. close the socket
 	close(server_fd);
-	//5. send/receive
-	//6. close the socket
+	
 	return 0;
 }
 
@@ -133,7 +107,7 @@ void serve_client(int client_fd, char **users_list, char **pass_list)
 		{
 			if (strcmp(message, "bye") == 0)
 			{
-				return;
+				break;
 			}
 
 			strncpy(command, &message[0], 5);
@@ -142,18 +116,26 @@ void serve_client(int client_fd, char **users_list, char **pass_list)
 
 			if (strncmp(command, "USER ", 5) == 0) // USER command
 			{
-				strncpy(user_name, &message[5], sizeof(message) - 5); // get username
-				index = userExist(user_name, users_list, 2);
-				if (index >= 0)
-				{ // if user exists
-					set_user = 1;
-					strcpy(message, "Username OK, password required");
+				if (set_user == 1)
+				{
+					strcpy(message, "User already set");
 					send(client_fd, message, strlen(message), 0);
 				}
 				else
 				{
-					strcpy(message, "Username doesn't exist");
-					send(client_fd, message, strlen(message), 0);
+					strncpy(user_name, &message[5], sizeof(message) - 5); // get username
+					index = userExist(user_name, users_list, 2);
+					if (index >= 0)
+					{ // if user exists
+						set_user = 1;
+						strcpy(message, "Username OK, password required");
+						send(client_fd, message, strlen(message), 0);
+					}
+					else
+					{
+						strcpy(message, "Username doesn't exist");
+						send(client_fd, message, strlen(message), 0);
+					}
 				}
 			}
 			else if (strncmp(command, "PASS ", 5) == 0) // PASS command
