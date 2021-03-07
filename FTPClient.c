@@ -17,7 +17,10 @@ int main(int argc, char *argv[])
 	 * In this case, in the control connection, the client needs to authenticate itself with the server for the control connection to be established
 	 * 
 	*/
-
+	if (argc != 3) {
+		printf("Error: Need 2 arguments\n");
+		return -1;
+	}
 	u_int32_t ip;
 	if (strcmp(argv[1], "127.0.0.1") == 0)
 		ip = INADDR_LOOPBACK;
