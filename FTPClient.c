@@ -82,13 +82,15 @@ int main(int argc, char *argv[])
 			}
 		}
 		else if (strncmp(command, "!PWD", 4) == 0)
-		{	
+		{
 			system("pwd");
 		}
-		else if (strncmp(command, "!LS", 3) == 0) {
+		else if (strncmp(command, "!LS", 3) == 0)
+		{
 			system("ls");
 		}
-		else
+
+		else if (strncmp(command, "USER ", 5) == 0 || strncmp(command, "PASS ", 5) == 0 || strncmp(command, "PWD", 3) == 0 || strncmp(command, "LS", 2) == 0)
 		{
 			send(server_fd, message, strlen(message), 0);
 			memset(message, 0, sizeof(message));

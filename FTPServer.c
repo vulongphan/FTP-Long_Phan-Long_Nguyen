@@ -28,7 +28,7 @@ int main()
 	// array of passwords corresponding to users
 	char *pass_list[] = {"1234", "abcd"};
 
-	//1. Create a socket and server address structure 
+	//1. Create a socket and server address structure
 	int server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_fd < 0)
 	{
@@ -40,8 +40,8 @@ int main()
 	memset(&server_address, 0, sizeof(server_address));
 
 	server_address.sin_family = AF_INET;
-	server_address.sin_port = htons(9000); 
-	server_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK); 
+	server_address.sin_port = htons(9000);
+	server_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
 	//2. Bind the socket with the server address
 	if (bind(server_fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
@@ -83,7 +83,7 @@ int main()
 
 	//5. close the socket
 	close(server_fd);
-	
+
 	return 0;
 }
 
@@ -94,9 +94,7 @@ void serve_client(int client_fd, char **users_list, char **pass_list)
 {
 	char message[100];
 	char command[100];
-	char user_name[100];
-	char pass[100];
-	int index;
+	int index;				   // index of the user and their password
 	int set_user = 0;		   // 0 means user is not set and 1 means otherwise
 	int authenticate_user = 0; // 0 means user has not authenticated and 1 means otherwise
 
@@ -123,6 +121,7 @@ void serve_client(int client_fd, char **users_list, char **pass_list)
 				}
 				else
 				{
+					char user_name[100];
 					strncpy(user_name, &message[5], sizeof(message) - 5); // get username
 					index = userExist(user_name, users_list, 2);
 					if (index >= 0)
@@ -142,6 +141,7 @@ void serve_client(int client_fd, char **users_list, char **pass_list)
 			{
 				if (set_user == 1) // if user is set
 				{
+					char pass[100];
 					strncpy(pass, &message[5], sizeof(message) - 5); // get password
 					if (validPassword(pass, pass_list, index) == 1)	 // if correct password or user has authenticated
 					{
@@ -165,6 +165,23 @@ void serve_client(int client_fd, char **users_list, char **pass_list)
 					strcpy(message, "Set USER first");
 					send(client_fd, message, strlen(message), 0);
 				}
+			}
+			else if (strncmp(command, "PWD", 3) == 0 || strncmp(command, "LS", 2) == 0)
+			{
+				FILE *fp;
+				char result[200];
+				char line[100];
+				fp = popen(command, "r");				
+				while (fgets(line, sizeof(line), fp) != NULL) //read the file until NULL
+				{
+					strcat(result, line);
+					memset(line, 0, sizeof(line));
+				}
+				result[strlen(result) - 1] = '\0'; // remove \n at the end
+				// printf("%s\n", result);
+				send(client_fd, result, strlen(result), 0);
+				memset(result, 0, sizeof(result));
+				fclose(fp);
 			}
 			else // if command not recognized
 			{
