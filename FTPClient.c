@@ -85,6 +85,9 @@ int main(int argc, char *argv[])
 		{	
 			system("pwd");
 		}
+		else if (strncmp(command, "!LS", 3) == 0) {
+			system("ls");
+		}
 		else
 		{
 			send(server_fd, message, strlen(message), 0);
