@@ -17,7 +17,8 @@ int main(int argc, char *argv[])
 	 * In this case, in the control connection, the client needs to authenticate itself with the server for the control connection to be established
 	 * 
 	*/
-	if (argc != 3) {
+	if (argc != 3)
+	{
 		printf("Error: Need 2 arguments\n");
 		return -1;
 	}
@@ -54,20 +55,40 @@ int main(int argc, char *argv[])
 	}
 
 	char message[100];
+	char command[100];
+	char dir[100];
 
 	while (1)
 	{
 		printf("ftp> ");
+
 		//gets(message);  //not safe
 		fgets(message, 100, stdin);			 //more safe but has no \n at the end,
 		message[strcspn(message, "\n")] = 0; //lets add it
+
 		//3. send/rec
 		if (strcmp(message, "bye") == 0)
 			break;
-		send(server_fd, message, strlen(message), 0);
-		memset(message, 0, sizeof(message));
-		recv(server_fd, message, sizeof(message) - 1, 0);
-		printf("%s\n", message);
+
+		strncpy(command, &message[0], 5);
+		command[5] = 0;
+
+		if (strncmp(command, "!CD ", 4) == 0)
+		{
+			strncpy(dir, &message[4], sizeof(message) - 4);
+			if (chdir(dir) == -1)
+			{
+				printf("Directory does not exist\n");
+			}
+		}
+		
+		else
+		{
+			send(server_fd, message, strlen(message), 0);
+			memset(message, 0, sizeof(message));
+			recv(server_fd, message, sizeof(message) - 1, 0);
+			printf("%s\n", message);
+		}
 	}
 
 	//4. close
