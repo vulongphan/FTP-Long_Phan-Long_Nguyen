@@ -81,7 +81,10 @@ int main(int argc, char *argv[])
 				printf("Directory does not exist\n");
 			}
 		}
-		
+		else if (strncmp(command, "!PWD", 4) == 0)
+		{	
+			system("pwd");
+		}
 		else
 		{
 			send(server_fd, message, strlen(message), 0);
