@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <netinet/in.h>
 
-void serve_client(int client_fd, char **users_list, char **pass_list);
+void serve_client(int client_fd, char* client_name, char **users_list, char **pass_list);
 int userExist(char *user_name, char **users_list, int len);
 int validPassword(char *pass, char **pass_list, int index);
 
@@ -62,6 +62,8 @@ int main()
 	int client_address_len = sizeof(client_address); // accept also needs client_address length
 	char client_name[50];
 
+	printf("Server listening...\n");
+
 	while (1)
 	{
 		int client_fd = accept(server_fd, (struct sockaddr *)&client_address, (socklen_t *)&client_address_len); // waiting for connections from a client
@@ -74,10 +76,12 @@ int main()
 			return -1;
 		}
 
+		printf("Connected to %s\n", client_name);
+
 		int pid = fork();
 		if (pid == 0)
 		{
-			serve_client(client_fd, users_list, pass_list);
+			serve_client(client_fd, client_name, users_list, pass_list);
 		}
 	}
 
@@ -90,7 +94,7 @@ int main()
 /**
  * 
 */
-void serve_client(int client_fd, char **users_list, char **pass_list)
+void serve_client(int client_fd, char* client_name, char **users_list, char **pass_list)
 {
 	char message[100];
 	int index;				   // index of the user and their password
@@ -107,7 +111,7 @@ void serve_client(int client_fd, char **users_list, char **pass_list)
 				break;
 			}
 
-			printf("Message from client: %s\n", message);
+			printf("Message from %s: %s\n", client_name, message);
 
 			if (strncmp(message, "USER ", 5) == 0) // USER command
 			{
@@ -186,6 +190,7 @@ void serve_client(int client_fd, char **users_list, char **pass_list)
 					result[strlen(result) - 1] = '\0'; // remove \n at the end
 					send(client_fd, result, strlen(result), 0);
 					memset(result, 0, sizeof(result));
+					memset(command, 0, sizeof(command));
 					pclose(fp); // close the output stream
 				}
 			}
@@ -198,8 +203,8 @@ void serve_client(int client_fd, char **users_list, char **pass_list)
 				}
 				else
 				{
-					char dir[100];
-					strncpy(dir, &message[3], sizeof(message) - 3);
+					char dir[50];
+					strncpy(dir, &message[3], strlen(message) - 3);
 					if (chdir(dir) == -1)
 					{
 						strcpy(message, "Directory does not exist");
@@ -212,16 +217,13 @@ void serve_client(int client_fd, char **users_list, char **pass_list)
 					}
 				}
 			}
-			else // if command not recognized
-			{
-				strcpy(message, "Invalid command");
-				send(client_fd, message, strlen(message), 0);
+			else if (strncmp(message, "QUIT", 4) == 0) {
+				close(client_fd);
+				printf("Connection to %s terminated\n", client_name);
+				break;
 			}
 		}
 	}
-
-	printf("Client disconnected...! \n");
-	close(client_fd);
 };
 
 /**

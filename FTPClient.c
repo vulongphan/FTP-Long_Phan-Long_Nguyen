@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 	}
 	int port = atoi(argv[2]);
 
-	//1. Create a socket and set address family, port number and address
+	// Create a socket and set address family, port number and address
 	int server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_fd < 0)
 	{
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 	server_address.sin_port = htons(port);
 	server_address.sin_addr.s_addr = htonl(ip);
 
-	//2. The client makes connection the server which is listening on port 8888
+	// The client makes connection the server 
 	if (connect(server_fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
 	{
 		perror("Connect :");
@@ -55,7 +55,6 @@ int main(int argc, char *argv[])
 	}
 
 	char message[100];
-	char dir[100];
 
 	while (1)
 	{
@@ -65,12 +64,9 @@ int main(int argc, char *argv[])
 		fgets(message, 100, stdin);			 //more safe but has no \n at the end,
 		message[strcspn(message, "\n")] = 0; //lets add it
 
-		//3. send/rec
-		if (strcmp(message, "bye") == 0)
-			break;
-
 		if (strncmp(message, "!CD ", 4) == 0) // '!CD' command
 		{
+			char dir[100];
 			strncpy(dir, &message[4], sizeof(message) - 4);
 			if (chdir(dir) == -1)
 			{
@@ -85,7 +81,6 @@ int main(int argc, char *argv[])
 		{
 			system("ls");
 		}
-
 		else if (strncmp(message, "USER ", 5) == 0 || strncmp(message, "PASS ", 5) == 0 || strncmp(message, "PWD", 3) == 0 || strncmp(message, "LS", 2) == 0 || strncmp(message, "CD ", 3) == 0)
 		{ // valid server commands
 			send(server_fd, message, strlen(message), 0);
@@ -93,12 +88,16 @@ int main(int argc, char *argv[])
 			recv(server_fd, message, sizeof(message) - 1, 0);
 			printf("%s\n", message);
 		}
+		else if (strncmp(message, "QUIT", 4) == 0) { // terminate connection and close socket
+			send(server_fd, message, strlen(message), 0);
+			close(server_fd);
+			printf("Connection terminated\nSocket closed\n");
+			break;
+		}
 		else {
 			printf("Invalid FTP command\n");
 		}
 	}
 
-	//4. close
-	close(server_fd);
 	return 0;
 }
