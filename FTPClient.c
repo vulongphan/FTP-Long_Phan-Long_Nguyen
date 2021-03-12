@@ -55,7 +55,6 @@ int main(int argc, char *argv[])
 	}
 
 	char message[100];
-	char command[100];
 	char dir[100];
 
 	while (1)
@@ -70,10 +69,7 @@ int main(int argc, char *argv[])
 		if (strcmp(message, "bye") == 0)
 			break;
 
-		strncpy(command, &message[0], 5);
-		command[5] = 0;
-
-		if (strncmp(command, "!CD ", 4) == 0)
+		if (strncmp(message, "!CD ", 4) == 0) // '!CD' command
 		{
 			strncpy(dir, &message[4], sizeof(message) - 4);
 			if (chdir(dir) == -1)
@@ -81,21 +77,24 @@ int main(int argc, char *argv[])
 				printf("Directory does not exist\n");
 			}
 		}
-		else if (strncmp(command, "!PWD", 4) == 0)
+		else if (strncmp(message, "!PWD", 4) == 0) // '!PWD' command
 		{
 			system("pwd");
 		}
-		else if (strncmp(command, "!LS", 3) == 0)
+		else if (strncmp(message, "!LS", 3) == 0) // '!LS' command
 		{
 			system("ls");
 		}
 
-		else if (strncmp(command, "USER ", 5) == 0 || strncmp(command, "PASS ", 5) == 0 || strncmp(command, "PWD", 3) == 0 || strncmp(command, "LS", 2) == 0)
-		{
+		else if (strncmp(message, "USER ", 5) == 0 || strncmp(message, "PASS ", 5) == 0 || strncmp(message, "PWD", 3) == 0 || strncmp(message, "LS", 2) == 0 || strncmp(message, "CD ", 3) == 0)
+		{ // valid server commands
 			send(server_fd, message, strlen(message), 0);
 			memset(message, 0, sizeof(message));
 			recv(server_fd, message, sizeof(message) - 1, 0);
 			printf("%s\n", message);
+		}
+		else {
+			printf("Invalid FTP command\n");
 		}
 	}
 

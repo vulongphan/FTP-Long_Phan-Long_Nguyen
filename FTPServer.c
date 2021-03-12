@@ -93,7 +93,6 @@ int main()
 void serve_client(int client_fd, char **users_list, char **pass_list)
 {
 	char message[100];
-	char command[100];
 	int index;				   // index of the user and their password
 	int set_user = 0;		   // 0 means user is not set and 1 means otherwise
 	int authenticate_user = 0; // 0 means user has not authenticated and 1 means otherwise
@@ -108,11 +107,9 @@ void serve_client(int client_fd, char **users_list, char **pass_list)
 				break;
 			}
 
-			strncpy(command, &message[0], 5);
-			command[5] = 0;
-			printf("Command from client: %s\n", command);
+			printf("Message from client: %s\n", message);
 
-			if (strncmp(command, "USER ", 5) == 0) // USER command
+			if (strncmp(message, "USER ", 5) == 0) // USER command
 			{
 				if (set_user == 1)
 				{
@@ -123,7 +120,7 @@ void serve_client(int client_fd, char **users_list, char **pass_list)
 				{
 					char user_name[100];
 					strncpy(user_name, &message[5], sizeof(message) - 5); // get username
-					index = userExist(user_name, users_list, 2);
+					index = userExist(user_name, users_list, 2); // update index of user name and password
 					if (index >= 0)
 					{ // if user exists
 						set_user = 1;
@@ -137,7 +134,7 @@ void serve_client(int client_fd, char **users_list, char **pass_list)
 					}
 				}
 			}
-			else if (strncmp(command, "PASS ", 5) == 0) // PASS command
+			else if (strncmp(message, "PASS ", 5) == 0) // PASS command
 			{
 				if (set_user == 1) // if user is set
 				{
@@ -166,26 +163,58 @@ void serve_client(int client_fd, char **users_list, char **pass_list)
 					send(client_fd, message, strlen(message), 0);
 				}
 			}
-			else if (strncmp(command, "PWD", 3) == 0 || strncmp(command, "LS", 2) == 0)
+			else if (strncmp(message, "PWD", 3) == 0 || strncmp(message, "LS", 2) == 0)
 			{
-				FILE *fp;
-				char result[200];
-				char line[100];
-				fp = popen(command, "r");				
-				while (fgets(line, sizeof(line), fp) != NULL) //read the file until NULL
+				if (authenticate_user == 0)
 				{
-					strcat(result, line);
-					memset(line, 0, sizeof(line));
+					strcpy(message, "Authenticate first");
+					send(client_fd, message, strlen(message), 0);
 				}
-				result[strlen(result) - 1] = '\0'; // remove \n at the end
-				// printf("%s\n", result);
-				send(client_fd, result, strlen(result), 0);
-				memset(result, 0, sizeof(result));
-				fclose(fp);
+				else
+				{
+					FILE *fp;
+					char result[200];
+					char line[100];
+					char command[10];
+					strncpy(command, &message[0], strlen(message)); // store away system command
+					fp = popen(command, "r");
+					while (fgets(line, sizeof(line), fp) != NULL) //read the file until NULL
+					{
+						strcat(result, line);
+						memset(line, 0, sizeof(line));
+					}
+					result[strlen(result) - 1] = '\0'; // remove \n at the end
+					send(client_fd, result, strlen(result), 0);
+					memset(result, 0, sizeof(result));
+					pclose(fp); // close the output stream
+				}
+			}
+			else if (strncmp(message, "CD ", 3) == 0)
+			{
+				if (authenticate_user == 0)
+				{
+					strcpy(message, "Authenticate first");
+					send(client_fd, message, strlen(message), 0);
+				}
+				else
+				{
+					char dir[100];
+					strncpy(dir, &message[3], sizeof(message) - 3);
+					if (chdir(dir) == -1)
+					{
+						strcpy(message, "Directory does not exist");
+						send(client_fd, message, strlen(message), 0);
+					}
+					else 
+					{
+						strcpy(message, "CD successfully executed");
+						send(client_fd, message, strlen(message), 0);
+					}
+				}
 			}
 			else // if command not recognized
 			{
-				strcpy(message, "Command not recognized");
+				strcpy(message, "Invalid command");
 				send(client_fd, message, strlen(message), 0);
 			}
 		}
@@ -203,7 +232,7 @@ int userExist(char *user_name, char **users_list, int len)
 	int i;
 	for (i = 0; i < len; i++)
 	{
-		if (strncmp(users_list[i], user_name, strlen(user_name)) == 0)
+		if (strncmp(users_list[i], user_name, strlen(users_list[i])) == 0)
 		{ // if the string is in the array
 			return i;
 		}
