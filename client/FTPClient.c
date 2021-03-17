@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 	server_address.sin_port = htons(port);
 	server_address.sin_addr.s_addr = htonl(ip);
 
-	// The client makes connection the server 
+	// The client makes connection the server
 	if (connect(server_fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
 	{
 		perror("Connect :");
@@ -88,13 +88,70 @@ int main(int argc, char *argv[])
 			recv(server_fd, message, sizeof(message) - 1, 0);
 			printf("%s\n", message);
 		}
-		else if (strncmp(message, "QUIT", 4) == 0) { // terminate connection and close socket
+		else if (strncmp(message, "PUT ", 4) == 0)
+		{
+			char file_name[100];
+			char file_content[500];
+			FILE *file;
+			char line[100];
+			strncpy(file_name, &message[4], sizeof(message) - 4); // get file_name from PUT command
+
+			if (!(file = fopen(file_name, "r")))
+			{
+				perror("File cant be opened..");
+			}
+			else
+			{
+				printf("File exists\n");
+				send(server_fd, message, strlen(message), 0);	// send PUT command to server
+				memset(message, 0, sizeof(message));
+				recv(server_fd, message, sizeof(message) - 1, 0); // wait for confirmation message from server
+				printf("%s\n", message);
+
+				memset(file_content, 0, sizeof(file_content));
+				while (fgets(line, sizeof(line), file) != NULL) // read each line of file
+				{
+					strcat(file_content, line);
+					memset(line, 0, sizeof(line));
+				}
+				
+				// open new TCP connection to send file
+				// Create a socket and set address family, port number and address
+				int server_sd = socket(AF_INET, SOCK_STREAM, 0);
+				if (server_sd < 0)
+				{
+					perror("Socket: ");
+					return (-1);
+				}
+				struct sockaddr_in server_address_new;
+				memset(&server_address_new, 0, sizeof(server_address_new));
+
+				server_address_new.sin_family = AF_INET;
+				server_address_new.sin_port = htons(3000); // new port for the new TCP connection
+				server_address_new.sin_addr.s_addr = htonl(ip);
+				if (connect(server_sd, (struct sockaddr *)&server_address_new, sizeof(server_address_new)) < 0)
+				{
+					perror("Connect :");
+					return -1;
+				}
+				
+				send(server_sd, file_content, strlen(file_content), 0); // send file_content to server through the new TCP connection
+				fclose(file);
+				close(server_sd); // close the TCP connection for file transfer
+				memset(message, 0, sizeof(message));
+				recv(server_fd, message, sizeof(message) - 1, 0); // wait for confirmation message from server
+				printf("%s\n", message);
+			}
+		}
+		else if (strncmp(message, "QUIT", 4) == 0)
+		{ // terminate connection and close socket
 			send(server_fd, message, strlen(message), 0);
 			close(server_fd);
 			printf("Connection terminated\nSocket closed\n");
 			break;
 		}
-		else {
+		else
+		{
 			printf("Invalid FTP command\n");
 		}
 	}

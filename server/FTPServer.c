@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <netinet/in.h>
 
-void serve_client(int client_fd, char* client_name, char **users_list, char **pass_list);
+void serve_client(int server_fd, int client_fd, char *client_name, char **users_list, char **pass_list);
 int userExist(char *user_name, char **users_list, int len);
 int validPassword(char *pass, char **pass_list, int index);
 
@@ -81,7 +81,7 @@ int main()
 		int pid = fork();
 		if (pid == 0)
 		{
-			serve_client(client_fd, client_name, users_list, pass_list);
+			serve_client(server_fd, client_fd, client_name, users_list, pass_list);
 		}
 	}
 
@@ -94,7 +94,7 @@ int main()
 /**
  * 
 */
-void serve_client(int client_fd, char* client_name, char **users_list, char **pass_list)
+void serve_client(int server_fd, int client_fd, char *client_name, char **users_list, char **pass_list)
 {
 	char message[100];
 	int index;				   // index of the user and their password
@@ -106,11 +106,6 @@ void serve_client(int client_fd, char* client_name, char **users_list, char **pa
 		memset(message, 0, sizeof(message));
 		if (recv(client_fd, message, sizeof(message) - 1, 0) > 0)
 		{
-			if (strcmp(message, "bye") == 0)
-			{
-				break;
-			}
-
 			printf("Message from %s: %s\n", client_name, message);
 
 			if (strncmp(message, "USER ", 5) == 0) // USER command
@@ -124,7 +119,7 @@ void serve_client(int client_fd, char* client_name, char **users_list, char **pa
 				{
 					char user_name[100];
 					strncpy(user_name, &message[5], sizeof(message) - 5); // get username
-					index = userExist(user_name, users_list, 2); // update index of user name and password
+					index = userExist(user_name, users_list, 2);		  // update index of user name and password
 					if (index >= 0)
 					{ // if user exists
 						set_user = 1;
@@ -182,7 +177,7 @@ void serve_client(int client_fd, char* client_name, char **users_list, char **pa
 					char command[10];
 					strncpy(command, &message[0], strlen(message)); // store away system command
 					fp = popen(command, "r");
-					while (fgets(line, sizeof(line), fp) != NULL) //read the file until NULL
+					while (fgets(line, sizeof(line), fp) != NULL) //read each line of the file
 					{
 						strcat(result, line);
 						memset(line, 0, sizeof(line));
@@ -210,14 +205,155 @@ void serve_client(int client_fd, char* client_name, char **users_list, char **pa
 						strcpy(message, "Directory does not exist");
 						send(client_fd, message, strlen(message), 0);
 					}
-					else 
+					else
 					{
 						strcpy(message, "CD successfully executed");
 						send(client_fd, message, strlen(message), 0);
 					}
 				}
 			}
-			else if (strncmp(message, "QUIT", 4) == 0) {
+			else if (strncmp(message, "PUT ", 4) == 0) // the idea is to accept a new TCP connection on a new port (21) for file transfer
+			{
+
+				// if user has authorized
+
+				int server_sd = socket(AF_INET, SOCK_STREAM, 0);
+				if (server_sd < 0)
+				{
+					perror("Socket: ");
+					return;
+				}
+
+				struct sockaddr_in server_address;
+				memset(&server_address, 0, sizeof(server_address));
+
+				server_address.sin_family = AF_INET;
+				server_address.sin_port = htons(3000);
+				server_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+				//2. Bind the socket with the server address
+				if (bind(server_sd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
+				{
+					perror("Bind: ");
+					return;
+				}
+
+				//3. Socket starts to listen for connections
+				if (listen(server_sd, 2) < 0)
+				{
+					perror("Listen: ");
+					return;
+				}
+
+				char file_name[100];
+				char file_content[500];
+				FILE *file;
+
+				strncpy(file_name, &message[4], sizeof(message) - 4); // get the file name
+				
+				memset(message, 0, sizeof(message));
+				strcpy(message, "From server: PUT command received"); // should send port number here
+				send(client_fd, message, strlen(message), 0);
+
+				int client_sd = accept(server_sd, NULL, NULL); // use a different bit for new TCP connection from client to send file
+
+				file = fopen(file_name, "w"); // open a new file to write to
+				memset(file_content, 0, sizeof(file_content));
+				recv(client_sd, file_content, sizeof(file_content) - 1, 0); // wait for file_content to be received
+				
+				// printf("File content:\n%s", file_content);
+				fputs(file_content, file);
+				fclose(file);
+				close(client_sd); // close TCP connection that receives file
+				memset(file_name, 0, sizeof(file_name));
+				memset(file_content, 0, sizeof(file_content));
+
+				memset(message, 0, sizeof(message));
+				strcpy(message, "From server: PUT file successful");
+				send(client_fd, message, strlen(message), 0);
+
+				/*
+				fd_set full_fdset, ready_fdset;
+				FD_ZERO(&full_fdset);
+				FD_SET(server_fd, &full_fdset);
+				int max_fd = server_fd;
+				ready_fdset = full_fdset;
+
+				if (select(max_fd + 1, &ready_fdset, NULL, NULL, NULL) < 0)
+				{
+					perror("Select");
+					return;
+				}
+				printf("Here\n");
+				for (int i = 0; i <= max_fd; i++)
+				{
+					if (FD_ISSET(i, &ready_fdset))
+					{
+						if (i == server_fd) // if bit i is used by server
+						{
+
+							int server_sd = socket(AF_INET, SOCK_STREAM, 0);
+							if (server_sd < 0)
+							{
+								perror("Socket: ");
+								return;
+							}
+
+							struct sockaddr_in server_address;
+							memset(&server_address, 0, sizeof(server_address));
+
+							server_address.sin_family = AF_INET;
+							server_address.sin_port = htons(21);
+							server_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+							//2. Bind the socket with the server address
+							if (bind(server_sd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
+							{
+								perror("Bind: ");
+								return;
+							}
+
+							//3. Socket starts to listen for connections
+							if (listen(server_sd, 2) < 0)
+							{
+								perror("Listen: ");
+								return;
+							}
+
+							int client_sd = accept(server_sd, NULL, NULL); // use a different bit for new TCP connection from client to send file
+
+							FD_SET(client_sd, &full_fdset);
+
+							if (client_sd > max_fd)
+								max_fd = client_sd;
+						}
+						else
+						{
+
+							int client_sd = i;
+							char file_name[100];
+							char file_content[500];
+							FILE *file;
+							strncpy(file_name, &message[4], sizeof(message) - 4);		// get the file name
+							file = fopen(file_name, "w");								// open a new file to write to
+							recv(client_sd, file_content, sizeof(file_content) - 1, 0); // wait for file_content to be received
+							// printf("File content:\n%s", file_content);
+							fputs(file_content, file);
+							fclose(file);
+							close(client_sd); // close TCP connection that receives file
+							FD_CLR(i, &full_fdset);
+							memset(file_name, 0, sizeof(file_name));
+							memset(file_content, 0, sizeof(file_content));
+							memset(message, 0, sizeof(message));
+							strcpy(message, "PUT file successful");
+							send(client_fd, message, strlen(message), 0);
+							break;
+						}
+					}
+				}*/
+			}
+			else if (strncmp(message, "QUIT", 4) == 0)
+			{
 				close(client_fd);
 				printf("Connection to %s terminated\n", client_name);
 				break;
