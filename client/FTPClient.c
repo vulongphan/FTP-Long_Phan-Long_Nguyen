@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 	*/
 	if (argc != 3)
 	{
-		printf("Error: Need 2 arguments\n");
+		printf("Error: Please only provide address and port as 2 arguments\n");
 		return -1;
 	}
 	u_int32_t ip;
@@ -102,45 +102,51 @@ int main(int argc, char *argv[])
 			}
 			else
 			{
-				printf("File exists\n");
-				send(server_fd, message, strlen(message), 0);	// send PUT command to server
+				send(server_fd, message, strlen(message), 0); // send PUT command to server
 				memset(message, 0, sizeof(message));
 				recv(server_fd, message, sizeof(message) - 1, 0); // wait for confirmation message from server
-				printf("%s\n", message);
+				// printf("%s\n", message);
+				if (strcmp(message, "Authenticate first") == 0)
+				{
+					printf("%s\n", message);
+				}
+				else
+				{
+					memset(file_content, 0, sizeof(file_content));
+					while (fgets(line, sizeof(line), file) != NULL) // read each line of file
+					{
+						strcat(file_content, line);
+						memset(line, 0, sizeof(line));
+					}
 
-				memset(file_content, 0, sizeof(file_content));
-				while (fgets(line, sizeof(line), file) != NULL) // read each line of file
-				{
-					strcat(file_content, line);
-					memset(line, 0, sizeof(line));
-				}
-				
-				// open new TCP connection to send file
-				// Create a socket and set address family, port number and address
-				int server_sd = socket(AF_INET, SOCK_STREAM, 0);
-				if (server_sd < 0)
-				{
-					perror("Socket: ");
-					return (-1);
-				}
-				struct sockaddr_in server_address_new;
-				memset(&server_address_new, 0, sizeof(server_address_new));
+					// open new TCP connection to send file
+					int port = atoi(message);
+					int server_sd = socket(AF_INET, SOCK_STREAM, 0);
+					if (server_sd < 0)
+					{
+						perror("Socket: ");
+						return (-1);
+					}
+					struct sockaddr_in server_address;
+					memset(&server_address, 0, sizeof(server_address));
 
-				server_address_new.sin_family = AF_INET;
-				server_address_new.sin_port = htons(3000); // new port for the new TCP connection
-				server_address_new.sin_addr.s_addr = htonl(ip);
-				if (connect(server_sd, (struct sockaddr *)&server_address_new, sizeof(server_address_new)) < 0)
-				{
-					perror("Connect :");
-					return -1;
+					server_address.sin_family = AF_INET;
+					server_address.sin_port = htons(port); // new port for the new TCP connection
+					server_address.sin_addr.s_addr = htonl(ip);
+					if (connect(server_sd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
+					{
+						perror("Connect :");
+						return -1;
+					}
+
+					send(server_sd, file_content, strlen(file_content), 0); // send file_content to server through the new TCP connection
+					fclose(file);
+					close(server_sd); // close the TCP connection for file transfer
+
+					memset(message, 0, sizeof(message));
+					recv(server_fd, message, sizeof(message) - 1, 0); // wait for confirmation message from server
+					printf("%s\n", message);
 				}
-				
-				send(server_sd, file_content, strlen(file_content), 0); // send file_content to server through the new TCP connection
-				fclose(file);
-				close(server_sd); // close the TCP connection for file transfer
-				memset(message, 0, sizeof(message));
-				recv(server_fd, message, sizeof(message) - 1, 0); // wait for confirmation message from server
-				printf("%s\n", message);
 			}
 		}
 		else if (strncmp(message, "QUIT", 4) == 0)
