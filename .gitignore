@@ -1,0 +1,5 @@
+.DS_Store
+client/FTPClient
+client/FTPClient.o
+server/FTPServer
+server/FTPServer.o

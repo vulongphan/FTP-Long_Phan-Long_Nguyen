@@ -1,6 +1,6 @@
 FTPServer: FTPServer.o
-	gcc -O -c FTPServer.c 
+	gcc -O -c server/FTPServer.c
 FTPClient: FTPClient.o
-	gcc -O -c FTPClient.c
+	gcc -O -c client/FTPClient.c
 clean: 
 	rm -f FTPServer.o FTPClient.o
