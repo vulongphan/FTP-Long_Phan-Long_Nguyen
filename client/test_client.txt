@@ -1,4 +1,4 @@
 Hello, this is test file from client
 
-Have a good day then!
+Have a good day!
 

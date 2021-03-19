@@ -267,13 +267,14 @@ void serve_client(int server_fd, int client_fd, char *client_name, char **users_
 
 					memset(file_content, 0, sizeof(file_content));
 					recv(client_sd, file_content, sizeof(file_content) - 1, 0); // wait for file_content to be received
-					
-					file = fopen(file_name, "w");								// open a new file to write to
-					fputs(file_content, file);									// move file content to FILE stream
-					
+
+					file = fopen(file_name, "w"); // open a new file to write to
+					fputs(file_content, file);	  // move file content to FILE stream
+
 					memset(file_name, 0, sizeof(file_name));
 					memset(file_content, 0, sizeof(file_content));
-					fclose(file);
+					fclose(file); // close file stream
+
 					// close TCP connection that receives file
 					close(client_sd);
 					close(server_sd);
@@ -281,6 +282,83 @@ void serve_client(int server_fd, int client_fd, char *client_name, char **users_
 					// send confirmation message to client
 					strcpy(message, "PUT file successful");
 					send(client_fd, message, strlen(message), 0);
+				}
+			}
+			else if (strncmp(message, "GET ", 4) == 0)
+			{
+				if (authenticate_user == 0)
+				{
+					strcpy(message, "Authenticate first");
+					send(client_fd, message, strlen(message), 0);
+				}
+				else
+				{
+					char file_name[100];
+					FILE *file;
+					char file_content[500];
+					char line[100];
+					strncpy(file_name, &message[4], sizeof(message) - 4);
+					file = fopen(file_name, "r");
+					if (file == NULL)
+					{
+						strcpy(message, "File not found");
+						send(client_fd, message, strlen(message), 0);
+					}
+					else
+					{
+						// we need the server to be ready for a new TCP connection for file transfer from client
+						int port = rand() % 10000 + 1000; // randomize port in range [1000,9999]
+
+						//1. Create new socket
+						int server_sd = socket(AF_INET, SOCK_STREAM, 0);
+						if (server_sd < 0)
+						{
+							perror("Socket: ");
+							return;
+						}
+						struct sockaddr_in server_address;
+						memset(&server_address, 0, sizeof(server_address));
+						server_address.sin_family = AF_INET;
+						server_address.sin_port = htons(port);
+						server_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+						//2. Bind the socket with the server address
+						if (bind(server_sd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
+						{
+							perror("Bind: ");
+							return;
+						}
+
+						//3. Socket starts to listen for connections
+						if (listen(server_sd, 2) < 0)
+						{
+							perror("Listen: ");
+							return;
+						}
+
+						// send the port for the new TCP connection to client
+						memset(message, 0, sizeof(message));
+						sprintf(message, "%i", port);
+						send(client_fd, message, strlen(message), 0);
+
+						int client_sd = accept(server_sd, NULL, NULL); // server accepts connection
+
+						memset(file_content, 0, sizeof(file_content));
+						while (fgets(line, sizeof(line), file) != NULL) // read each line of file
+						{
+							strcat(file_content, line);
+							memset(line, 0, sizeof(line));
+						}
+						send(client_sd, file_content, strlen(file_content), 0); // send file_content to server through the new TCP connection
+
+						memset(file_name, 0, sizeof(file_name));
+						memset(file_content, 0, sizeof(file_content));
+						fclose(file); // close file stream
+
+						// close TCP connection that receives file
+						close(client_sd);
+						close(server_sd);
+					}
 				}
 			}
 			else if (strncmp(message, "QUIT", 4) == 0)

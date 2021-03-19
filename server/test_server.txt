@@ -1,0 +1,4 @@
+Hello, this is test file from server
+
+Have a good day!
+

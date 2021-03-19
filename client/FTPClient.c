@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
 
 			if (!(file = fopen(file_name, "r")))
 			{
-				perror("File cant be opened..");
+				printf("File not found\n");
 			}
 			else
 			{
@@ -147,6 +147,54 @@ int main(int argc, char *argv[])
 					recv(server_fd, message, sizeof(message) - 1, 0); // wait for confirmation message from server
 					printf("%s\n", message);
 				}
+			}
+		}
+		else if (strncmp(message, "GET ", 4) == 0)
+		{
+			char file_name[100];
+			char file_content[500];
+			FILE *file;
+			strncpy(file_name, &message[4], sizeof(message) - 4); // get file_name from GET command
+			
+			send(server_fd, message, strlen(message), 0);
+			memset(message, 0, sizeof(message));
+			recv(server_fd, message, sizeof(message) - 1, 0); // wait for confirmation message from server
+			if (strcmp(message, "Authenticate first") == 0 || strcmp(message, "File not found") == 0)
+			{
+				printf("%s\n", message);
+			}
+			else
+			{
+				// open new TCP connection to send file
+				int port = atoi(message);
+				int server_sd = socket(AF_INET, SOCK_STREAM, 0);
+				if (server_sd < 0)
+				{
+					perror("Socket: ");
+					return (-1);
+				}
+				struct sockaddr_in server_address;
+				memset(&server_address, 0, sizeof(server_address));
+
+				server_address.sin_family = AF_INET;
+				server_address.sin_port = htons(port); // new port for the new TCP connection
+				server_address.sin_addr.s_addr = htonl(ip);
+				if (connect(server_sd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
+				{
+					perror("Connect :");
+					return -1;
+				}
+				recv(server_sd, file_content, sizeof(file_content) - 1, 0); // wait to receive file content from server
+
+				file = fopen(file_name, "w"); // open a new file to write to
+				fputs(file_content, file);
+
+				memset(file_name, 0, sizeof(file_name));
+				memset(file_content, 0, sizeof(file_content));
+				fclose(file);
+				close(server_sd);
+
+				printf("GET file successful\n");
 			}
 		}
 		else if (strncmp(message, "QUIT", 4) == 0)
