@@ -1,4 +1,4 @@
-FTPServer: FTPServer.o
-	gcc -O -c FTPServer.c 
+server: FTPServer.o
+	gcc -O -c FTPServer.c -o FTPServer
 clean: 
-	rm -f FTPServer.o
+	rm -f FTPServer.o FTPServer
