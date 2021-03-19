@@ -2,8 +2,8 @@
 This is the source code for a FTP (File Transfer Protocol) client/server model hosted locally that runs on top of sockets
 
 ## What does the code do
-The source code includes server code (`server/FTPServer.c`) and client code (`client/FTPClient.c`) for a FTP application
-The terminal is used for client interface (please note that the interface now only supports Linux based machines)
+The source code includes server code (`server/FTPServer.c`) and client code (`client/FTPClient.c`) for a FTP application.
+The terminal is used for client interface (please note that the interface now only supports Linux based machines).
 The application currently supports the following commands
 * `USER username`: set user name
 * `PASS password`: authenticate using password
@@ -19,6 +19,6 @@ The application currently supports the following commands
 
 ## Installation
 * `git clone` this repo to your local machine
-* `cd` into `/server` and run `make && ./FTPServer` to first start server process 
-* `cd` into `/client` and run `make && ./FTPClient 127.0.0.1 9000` to start client process
+* `cd` into `/server` and run `make && ./FTPServer` to first start the server process 
+* `cd` into `/client` and run `make && ./FTPClient 127.0.0.1 9000` to start the client process
 * Currently there are two valid users which can be found in `users_list` with their corresponding passwords in `pass_list` in `server/FTPServer.c` (`username: long_phan, password: 1234` and `username: long_nguyen, password: abcd`)
