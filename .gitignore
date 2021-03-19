@@ -1,5 +1,15 @@
 .DS_Store
+
 client/FTPClient
 client/FTPClient.o
+
+client/test_client.txt
+client/test_server.txt
+client/test_dir_00
+
 server/FTPServer
 server/FTPServer.o
+
+server/test_client.txt
+server/test_server.txt
+
