@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <netinet/in.h>
 
+#define DIK "./server_dir/"
+
 void serve_client(int client_fd, char* client_name, char **users_list, char **pass_list);
 int userExist(char *user_name, char **users_list, int len);
 int validPassword(char *pass, char **pass_list, int index);
@@ -43,6 +45,8 @@ int main()
 	server_address.sin_port = htons(9000);
 	server_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
+	
+
 	//2. Bind the socket with the server address
 	if (bind(server_fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
 	{
@@ -56,6 +60,13 @@ int main()
 		perror("Listen: ");
 		return -1;
 	}
+
+	// select() preparation
+    fd_set full_fdset, ready_fdset;
+    FD_ZERO(&full_fdset);
+    FD_SET(server_fd,&full_fdset);
+
+    int max_fd = server_fd;
 
 	//4. accept
 	struct sockaddr_in client_address;				 //we to pass this to accept method to get client info
@@ -165,6 +176,26 @@ void serve_client(int client_fd, char* client_name, char **users_list, char **pa
 				{
 					strcpy(message, "Set USER first");
 					send(client_fd, message, strlen(message), 0);
+				}
+			}
+			else if (strncmp(message, "GET ",4) == 0) //GET command, send file from server to client
+			{
+				if(authenticate_user==0)
+				{
+					strcpy(message,"Authenticate first");
+					send(client_fd, message, strlen(message), 0);
+				}
+				else
+				{
+					FILE* file;
+					if(!(file = fopen(message,"r")))
+					{
+						perror("Can't open File or File is not in current directory!");
+					}
+					else
+					{
+						char = 
+					}
 				}
 			}
 			else if (strncmp(message, "PWD", 3) == 0 || strncmp(message, "LS", 2) == 0)

@@ -3,9 +3,12 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <dirent.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <netinet/in.h>
+
+#define DIK "./client_dir/"
 
 int main(int argc, char *argv[])
 {
@@ -54,15 +57,23 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	char message[100];
+	char message[1000], buffer[1000];
+	char *args[10];
 
 	while (1)
 	{
 		printf("ftp> ");
 
 		//gets(message);  //not safe
-		fgets(message, 100, stdin);			 //more safe but has no \n at the end,
+		fgets(message, 1000, stdin);		 //more safe but has no \n at the end,
 		message[strcspn(message, "\n")] = 0; //lets add it
+
+		int countArgs = parse_line(message, args);
+		if (countArgs == 0)
+		{
+			printf("ftp> ");
+			continue;
+		}
 
 		if (strncmp(message, "!CD ", 4) == 0) // '!CD' command
 		{
@@ -71,6 +82,19 @@ int main(int argc, char *argv[])
 			if (chdir(dir) == -1)
 			{
 				printf("Directory does not exist\n");
+			}
+		}
+		else if (strcmp("PUT", args[0]) == 0)
+		{
+			if (countArgs != 2)
+			{
+				print("Invalid Syntax");	//need PUT and filename
+			}
+			else
+			{
+				write(server_fd, args[0],strlen(args[0]));
+
+				memset(buffer,0,sizeof(buffer));
 			}
 		}
 		else if (strncmp(message, "!PWD", 4) == 0) // '!PWD' command
@@ -100,4 +124,20 @@ int main(int argc, char *argv[])
 	}
 
 	return 0;
+}
+
+int parse_line(char *str, char *words[])
+{
+	str = strtok(str,"\n");
+
+	int k = 0; //number of words
+	char *ptr = strtok(str," ");
+
+	while(ptr!=NULL)
+	{
+		words[k++] = ptr;
+		ptr = strtok(NULL, " ");
+	}
+
+	return k;
 }
