@@ -177,8 +177,12 @@ void serve_client(int server_fd, int client_fd, char *client_name, char **users_
 					char result[200];
 					char line[100];
 					char command[10];
-					strncpy(command, &message[0], strlen(message)); // store away system command
+					
+					if (strncmp(message, "PWD", 3) == 0) strcpy(command, "pwd");
+					else if (strncmp(message, "LS", 2) == 0) strcpy(command, "ls");
+
 					fp = popen(command, "r");
+					memset(result, 0, sizeof(result));
 					while (fgets(line, sizeof(line), fp) != NULL) //read each line of the file
 					{
 						strcat(result, line);
