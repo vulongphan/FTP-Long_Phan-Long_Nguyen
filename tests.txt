@@ -1,0 +1,77 @@
+1. These are the tests I have made for server code:
+
+Check if socket is created, binded, listens and accepts connection successfully:
+* I check for the value returned by the corresponding functions
+* If the value is smaller than 0 then there is an error, else the socket is ready to for connection
+
+Check if the user exists and if the password is valid:
+* I use two arrays to store user names and passwords
+* User name exists if it is in user_list array
+* Password is valid if user name at index i in user_list has corresponding password at index i in pass_list
+* Currently there are only two valid user names and passwords
+
+Check if user has set user name or authenticated:
+* I use 2 variables set_user and authenticate_user to store these two states of user session
+* They only have values of 0 or 1 at a moment in time during a user's session
+
+Check if CD directory has a valid directory:
+* I first extract directory name from the command
+* Then I use chdir() to open the given directory, if the directory does not exist (the function returns a negative value),
+I send back the error to the client
+
+Check if GET file has an existing file:
+* I first need to extract the file name from the command
+* Then I use fopen() to open the file, if the file does not exist, I send the error back to the client
+
+Check if a new TCP connection is ready for file transfer:
+* I need to check if a new socket is created, binded, listens and accepts connection successfully
+
+Some known issues:
+* I have not handled the case where multiple clients open a new TCP connection for file transfer on the same port,
+which then can cause socker binding error. To solve this issue, I intend to keep a hashset of which port 
+is being used for file transfer. A potential solution might be to use Select() which monitors sockets that are 
+ready for new connection
+* The database of users are not yet robust and scalable. Having a proper database framework would be desirable
+* I am still hardcoding the size of string variables such as file_content and result (which store system output
+when executing command such as pwd or ls) which would cause issue when the file content or the system output is too large
+* The server file has 400 lines of code and this makes it hard to read and maintain. I would suggest refactoring it into
+smaller modules and edit Makefile to compile the desired executables
+
+2. These are the tests I have made for client code:
+
+Check for command line arguments:
+* I make a check for the number of command line arguments to be included (must be 2 for address and port)
+* Currently the server is hosted locally so the first argument must be 127.0.0.1
+* The second argument is the port that the server process is running on, which is 9000 currently
+
+Check if the socket is created and connects succesfully:
+* I use socket() and connect() to check for these two cases
+* There is an error if the returned value is negative
+
+Check if !CD directory has a valid directory:
+* I first extract directory name from the command
+* Then I use chdir() to open the given directory, if the directory does not exist (the function returns a negative value),
+I print out the error on the client interface
+
+Check if PUT file has a valid file:
+* I first need to extract the file name from the command
+* Then I use fopen() to open the file, if the file does not exist, I print out the error in the client interface
+
+Check if a new TCP connection is ready for file transfer:
+* I need to check if a new socket is created, binded, listens and accepts connection successfully
+
+Check if a command is valid:
+* If the command is not one of the given ones in the homework instructions then it is considered invalid
+
+Some known issues:
+* The interface currently only works for Linux based machines since machines that use other OS like Windows cannot execute command
+such as ls and pwd
+
+
+
+
+
+
+
+
+
