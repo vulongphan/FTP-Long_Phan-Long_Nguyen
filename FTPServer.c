@@ -194,7 +194,7 @@ void serve_client(int client_fd, char* client_name, char **users_list, char **pa
 					}
 					else
 					{
-						char = 
+
 					}
 				}
 			}
